@@ -7,12 +7,12 @@ autosize: true
 Pitch Presentation My App
 ========================================================
 
-For my app go to <https://mvlunenburg.shinyapps.io/myapp/>.
+For my app go to <https://mvlunenburg.shinyapps.io/prediction_nextword/>.
 
 Content
 - Why this app is usefull
 - How the app was build
-- Code of the app
+- Examples
 - Link to app
 
 Why this app is usefull
@@ -46,7 +46,7 @@ My App
 
 Thanks for viewing and good luck reviewing.
 
-Here is the link to my app: <https://mvlunenburg.shinyapps.io/myapp/>.
+Here is the link to my app: <https://mvlunenburg.shinyapps.io/prediction_nextword/>.
 
 Thanks!
 
