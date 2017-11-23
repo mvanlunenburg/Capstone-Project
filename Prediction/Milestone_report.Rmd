@@ -1,0 +1,164 @@
+---
+title: "Data exploration Capstone Project - Milestone report"
+author: "MvL"
+date: "14 november 2017"
+output: html_document
+---
+#Introduction
+This report is part of the data science specialization capstone project on Coursera taught by John Hopkins University. 
+The report contains the data exploration and first analyses towards building a predictive text model. The data used in this project are kindly provided by SwiftKey. 
+
+Firstly the data are downloaded from https://d396qusza40orc.cloudfront.net/dsscapstone/dataset/Coursera-SwiftKey.zip
+There are four sets of data from different languages, here we will look at the English datasets. There are three English datasets: texts from blogs, news and Twitter. Secondly a short summary of the raw data is given. Then a sample is created and frequencies of words and word combinations are presented. Lastly the findings of these analyses will be discussed and an outline of the plans for creating a predictive model will be given.
+
+
+##Loading the data
+```{r libraries, echo=TRUE, warning=FALSE, message=FALSE}
+library(tm)
+library(SnowballC)
+library(RWeka)
+library(wordcloud)
+library(ggplot2)
+```
+Three files are analysed and used to build a predictive text model, namely texts from English blogs, news and twitter. In this report the datasets are loaded, analysed and used for creating a predictive model. 
+
+```{r data load, echo=TRUE, cache=TRUE, warning=FALSE}
+setwd("~/GitHub/Capstone-Project")
+
+#open Connections
+EnBlogs   <- file("en_US/en_US.blogs.txt")
+EnNews    <- file("en_US/en_US.news.txt")
+EnTwitter <- file("en_US/en_US.twitter.txt")
+
+#read files and assign to structures
+blogs_En   <- readLines(EnBlogs, encoding="UTF-8", skipNul = TRUE)
+news_En    <- readLines(EnNews, encoding="UTF-8", skipNul = TRUE)
+twitter_En <- readLines(EnTwitter, encoding="UTF-8", skipNul = TRUE)
+
+#close connections 
+close(EnBlogs)
+close(EnNews)
+close(EnTwitter)
+
+#read file lenghts
+lenghtBlogs   <- length(blogs_En)
+lenghtNews    <- length(news_En)
+lenghtTwitter <- length(twitter_En)
+
+#wordcount 
+wordsBlogs <- sum(nchar(blogs_En))
+wordsNews <- sum(nchar(news_En))
+wordsTwitter <- sum(nchar(twitter_En))
+```
+# Basic summary raw data 
+The three English datasets are loaded, here some basic summaries of the datasets are given.
+
+The English blogs have a lenght of `r lenghtBlogs` and contain `r wordsBlogs` words.
+The English news dataset has a lenght of `r lenghtNews` and contain `r wordsNews` words.
+The English twitter dataset has a lenght of `r lenghtTwitter` and contain `r wordsTwitter` words.
+
+For the speed of the analyses and end product a sample of the data will be created. 
+
+##Sampling
+```{r samples, echo=TRUE, warning=FALSE}
+set.seed(1288)
+
+#create smaller samples of the datasets
+sampleBlogs<- blogs_En[rbinom((lenghtBlogs)*.010,lenghtBlogs, .5)] 
+sampleNews<- news_En[rbinom((lenghtNews)*.10,lenghtNews, .5)]
+sampleTwitter<- twitter_En[rbinom((lenghtTwitter)*.005,lenghtTwitter, .5)]
+
+#create one sample document 
+sampleTot <- c(sampleBlogs, sampleNews, sampleTwitter)
+
+#clean up workspace
+rm(lenghtTwitter,lenghtNews,lenghtBlogs,twitter_En, news_En, blogs_En, EnTwitter, EnNews, EnBlogs)
+
+sampleCorpus <- VCorpus(VectorSource(sampleTot))
+```
+From each of the datasets a subset is created via a random binomial sample selection. Next the samples of the three datasets are combined to one document, this document is used in the following analyses. 
+
+##Profanity filtering, tokenizing & transforming
+To create a clean dataset with meaningful words and exluding profanities the data can be used for prediction. To do so the created dataset needs several manipulations. The steps taken are: transformations to all lower case letters, removing punctuation, removing numbers, removing websites, remove stop words, removing swearwords, reducing words to their stems, removing multiple spaces and removing layout. 
+
+###Profanity words download
+```{r profanity, echo=TRUE, cache=TRUE}
+#Swearwords come from this website with a list of English swearwords http://www.bannedwordlist.com/
+swearWords<- read.csv("C:/Users/Mari van Lunenburg/Documenten/Github/Capstone-Project/swearWords.csv", header = FALSE, stringsAsFactors = FALSE)
+swearWords <- as.character(swearWords$V1)
+```
+
+###Tokenize and transform
+```{r tokenize, echo=TRUE, warning=FALSE, cache=TRUE}
+sampleCorpus <- tm_map(sampleCorpus, content_transformer(function(x) iconv(x, to="UTF-8", sub="byte")))
+sampleCorpus <- tm_map(sampleCorpus, content_transformer(tolower))
+sampleCorpus <- tm_map(sampleCorpus, content_transformer(removePunctuation))
+sampleCorpus <- tm_map(sampleCorpus, content_transformer(removeNumbers))
+removeURL <- function(x) gsub("(f|ht)tp(s?)://(.*)[.][a-z]+", "", x)
+sampleCorpus <- tm_map(sampleCorpus, content_transformer(removeURL))
+sampleCorpus <- tm_map(sampleCorpus, stripWhitespace)
+sampleCorpus <- tm_map(sampleCorpus, removeWords, stopwords("english"))
+sampleCorpus <- tm_map(sampleCorpus, removeWords, swearWords)
+sampleCorpus <- tm_map(sampleCorpus, stemDocument, language = "english") 
+sampleCorpus <- tm_map(sampleCorpus, PlainTextDocument)
+```
+
+#Data analyses - Frequencies
+Next the frequencies of the words in the dataset will be regarded. Some visualisaties of the words and their frequencies will be displayed. The focus here are single words (mongram), combination of two words (bigram) and combinations of three words (trigram). 
+
+```{r frequency, echo=TRUE, warning=FALSE}
+#Count frequencies of words in corpus
+set.seed(1289)
+freq <- TermDocumentMatrix(sampleCorpus)
+freq <- as.matrix(freq)
+freqCorpus <- sort(rowSums(freq),decreasing=TRUE)
+freqCorpus <- data.frame(word = names(freqCorpus),freq=freqCorpus)
+head(freqCorpus, 10)
+```
+
+```{r n gram, echo=TRUE, warning=FALSE}
+#Calculate 2- and 3-grams frequencies  
+options(mc.cores=1)
+set.seed(1290)
+bigram <- function(x) NGramTokenizer(x, Weka_control(min = 2, max = 2))
+freqBi <- TermDocumentMatrix(sampleCorpus, control=list(tokenize = bigram, bounds = list(local = c(2,Inf))))
+freqBi <- as.matrix(freqBi)
+freqBi <- sort(rowSums(freqBi),decreasing=TRUE)
+freqBiCorpus <- data.frame(word = names(freqBi),freq=freqBi)
+
+trigram <- function(x) NGramTokenizer(x, Weka_control(min = 3, max = 3))
+freqTri <- TermDocumentMatrix(sampleCorpus, control = list(tokenize = trigram, bounds = list(local = c(2,Inf))))
+freqTri <- as.matrix(freqTri)
+freqTri <- sort(rowSums(freqTri),decreasing=TRUE)
+freqTriCorpus <- data.frame(word = names(freqTri),freq=freqTri)
+```
+
+##Visualisations
+Here the wordclouds and barplots of the mono-, di- and trigrams are shown.
+```{r visualisations, echo=TRUE, warning=FALSE, cache=TRUE}
+#Wordclouds of the most frequent word (combinations)
+par(mfrow = c(1, 3))
+wordcloud(freqCorpus[,1], freqCorpus[,2], min.freq =200, random.order = F, ordered.colors = F, colors=brewer.pal(8,"Dark2"))
+wordcloud(freqBiCorpus[,1], freqBiCorpus[,2], min.freq =5, random.order = F, ordered.colors = F, colors=brewer.pal(8,"Dark2"))
+wordcloud(freqTriCorpus[,1], freqTriCorpus[,2], min.freq =5, random.order = F, ordered.colors = F, colors=brewer.pal(8,"Dark2"))
+
+par(mfrow = c(1, 1))
+ggplot(freqCorpus[1:20,], aes(word, freq))   + geom_bar(stat = "identity", fill="#ce42f4") + coord_flip() + ggtitle("Monogram")
+ggplot(freqBiCorpus[1:20,], aes(word, freq))   + geom_bar(stat = "identity", fill="#4741f4") + coord_flip() + ggtitle("Bigram")
+ggplot(freqTriCorpus[1:20,], aes(word, freq))   + geom_bar(stat = "identity", fill="#ff7221") + coord_flip() + ggtitle("Trigram")
+```
+
+#Findings
+The most important findings from this analyses:
+1. For monograms the sampled dataset contains sufficient data.
+2. For the di- and trigrams the sampled dataset is not enough for creating a meaningful prediction model. Therefore the dataset in the final prediction will contain larger sets of data
+3. The twitter data set contains max 140 characters per line, which makes it less usefull for longer (2+) words combination analyses and prediction. Furthermore this data contains the most nonformal language use.
+4. Due to the period of collection of the data words on certain topics will be increasingly or less present in the dataset, i.e. 'robert kaufman' in the digrams. This is something to be aware of when building a predictive model.
+
+#Next steps
+* Create a balanced dataset using sampling considering it has sufficient data.
+* Split the data in a train, validation and test set. 
+* Create prediction models.
+* Select best performing model
+* Create Shiny app incorporating the selected model.
+

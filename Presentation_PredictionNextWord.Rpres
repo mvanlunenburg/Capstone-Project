@@ -1,0 +1,92 @@
+Presentation_PredictionNextWord
+========================================================
+author: MvL
+date: 2017-11-23
+autosize: true
+
+Pitch Presentation My App
+========================================================
+
+For my app go to <https://mvlunenburg.shinyapps.io/myapp/>.
+
+Content
+- Why this app is usefull
+- How the app was build
+- Code of the app
+- Link to app
+
+Why this app is usefull
+========================================================
+
+Predicting next word in phrase
+
+This app is created to predict the next possible words in a phrase of max 5 words based on the past few words in the phrase. It is especially designed for creating short sentences for non-native speaking people.  When learning a language it can be difficult to formulate sentences. For example people from abroad trying to integreate and learn the English language. Therefore this app gives them the opportunity to predict what would be a logical next word in the phrase. 
+
+
+How the app was build
+
+My app was build using R studio using shiny. The dataset underlying this app is kindly provided by SwiftKey and contained sentences from English blogs, news articles and twitter messages. Therefore the predicted next word in the sentence has more formal and more informal* suggestions.
+Profinaty is removed from the data and will not be suggested.
+
+In the next slides some examples will be presented.
+
+
+Slide With examples
+========================================================
+
+
+![alt text](app_screenshot.png)
+
+
+Slide With R code server
+========================================================
+
+```{r server, eval=FALSE}
+library(shiny)
+library(ggplot2)
+library(dplyr)
+# select columns to be used in the analysis
+diam <- diamonds[,c(1:4,7)]
+# Define server logic required to draw a plot
+shinyServer(function(input, output) {
+        output$distPlot <- renderPlot({
+                # select diamonds depending of user input
+                diam <- filter(diamonds, grepl(input$cut, cut), grepl(input$col, color), grepl(input$clar, clarity))
+                # build linear regression model
+                fit <- lm( price~carat, diam)
+                # predicts the price
+                pred <- predict(fit, newdata = data.frame(carat = input$car,
+                                                          cut = input$cut,
+                                                          color = input$col,
+                                                          clarity = input$clar))
+                # Drow the plot using ggplot2
+                plot <- ggplot(data=diam, aes(x=carat, y = price))+
+                        geom_point(aes(color = cut), alpha = 0.3)+
+                        geom_smooth(method = "lm")+
+                        geom_vline(xintercept = input$car, color = "red")+
+                        geom_hline(yintercept = pred, color = "green")
+                plot
+        })
+        output$result <- renderText({
+                # renders the text for the prediction below the graph
+                diam <- filter(diamonds, grepl(input$cut, cut), grepl(input$col, color), grepl(input$clar, clarity))
+                fit <- lm( price~carat, diam)
+                pred <- predict(fit, newdata = data.frame(carat = input$car,
+                                                          cut = input$cut,
+                                                          color = input$col,
+                                                          clarity = input$clar))
+                res <- paste(round(pred, digits = 2), "$")
+                res
+        })
+
+})
+
+```
+
+My App
+========================================================
+Thanks for viewing and good luck reviewing.
+
+Here is the link to my app once more: <https://mvlunenburg.shinyapps.io/myapp/>.
+
+Thanks!

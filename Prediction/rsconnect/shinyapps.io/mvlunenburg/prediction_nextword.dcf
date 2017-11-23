@@ -1,0 +1,13 @@
+name: prediction_nextword
+title: Prediction_NextWord
+username:
+account: mvlunenburg
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 239372
+bundleId: 1092627
+url: https://mvlunenburg.shinyapps.io/prediction_nextword/
+when: 1511449829.26389
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: Bigrams.RData|fivegrams.RData|fourgrams.RData|Hexagrams.RData|monograms.RData|Pentagrams.RData|Quadgrams.RData|sixgrams.RData|threegrams.RData|Trigrams.RData|twograms.RData|Unigrams.RData
